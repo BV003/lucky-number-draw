@@ -1,0 +1,216 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lucky Number Draw</title>
+<style>
+/* Layout: one centered stage on Chinese red — the number is the hero, controls sit quietly below. Single committed look for projector use. */
+:root {
+  --red: #8E1B1B;
+  --red-2: #A52424;
+  --red-3: #6E1414;
+  --gold: #E3A92B;
+  --gold-soft: #F3D48A;
+  --paper: #FFF8EE;
+  --ink: #2A1A14;
+  --line: rgba(243, 212, 138, 0.35);
+  --display: Georgia, "Times New Roman", serif;
+  --brush: "Kaiti SC", "KaiTi", "STKaiti", serif;
+  --ui: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--red);
+  background-image: radial-gradient(circle at 50% 38%, var(--red-2) 0%, var(--red) 55%, var(--red-3) 100%);
+  color: var(--paper);
+  font-family: var(--ui);
+  font-size: 16px;
+}
+.wrap {
+  min-height: 100%;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 16px;
+  padding-block: 24px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  max-width: 980px;
+  margin: 0 auto;
+}
+header { text-align: center; }
+.eyebrow { font-family: var(--brush); color: var(--gold); font-size: 30px; line-height: 1.1; }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(22px, 3.2vw, 34px); margin: 4px 0 0; letter-spacing: 0.01em; text-wrap: balance; }
+
+.stage { display: grid; place-items: center; gap: 18px; }
+.seal {
+  width: min(64vmin, 440px);
+  aspect-ratio: 1;
+  max-width: 100%;
+  border: 4px solid var(--gold);
+  border-radius: 28px;
+  background: var(--red-3);
+  display: grid;
+  place-items: center;
+  position: relative;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.35), inset 0 0 0 10px var(--red-3), inset 0 0 0 12px var(--line);
+}
+.num {
+  font-family: var(--display);
+  color: var(--gold);
+  font-size: min(36vmin, 250px);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transition: transform 0.25s ease;
+}
+.num.rolling { color: var(--gold-soft); }
+.num.landed { animation: pop 0.45s ease; }
+@keyframes pop { 0% { transform: scale(0.85); } 60% { transform: scale(1.08); } 100% { transform: scale(1); } }
+.status { min-height: 24px; color: var(--gold-soft); font-size: 17px; text-align: center; }
+
+.draw {
+  font-family: var(--ui); font-weight: 700; font-size: 22px;
+  color: var(--ink); background: var(--gold);
+  border: 0; border-radius: 999px; padding: 16px 48px; cursor: pointer;
+  box-shadow: 0 6px 0 #B9861C;
+}
+.draw:hover { filter: brightness(1.05); }
+.draw:active { transform: translateY(3px); box-shadow: 0 3px 0 #B9861C; }
+.draw:disabled { opacity: 0.55; cursor: not-allowed; }
+.hint { font-size: 13px; color: var(--gold-soft); opacity: 0.8; }
+
+.panel {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 22px;
+  border-top: 1px solid var(--line); padding-top: 16px;
+}
+.field { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.field input[type="number"] {
+  width: 72px; font: 600 18px var(--ui); text-align: center;
+  color: var(--ink); background: var(--paper); border: 2px solid var(--gold); border-radius: 10px; padding: 6px 4px;
+}
+.field input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--gold); }
+.ghost {
+  font: 600 14px var(--ui); color: var(--paper); background: transparent;
+  border: 1.5px solid var(--line); border-radius: 999px; padding: 8px 16px; cursor: pointer;
+}
+.ghost:hover { border-color: var(--gold); color: var(--gold); }
+.history { width: 100%; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; min-height: 34px; }
+.chip {
+  font: 600 15px var(--ui); font-variant-numeric: tabular-nums;
+  min-width: 34px; height: 34px; padding: 0 8px; box-sizing: border-box;
+  display: inline-grid; place-items: center; border-radius: 8px;
+  background: rgba(0,0,0,0.18); color: var(--gold-soft); border: 1px solid var(--line);
+}
+.chip.last { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+.history-label { width: 100%; text-align: center; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-soft); opacity: 0.75; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--paper); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .num.landed { animation: none; } }
+@media (max-width: 480px) { .eyebrow { font-size: 24px; } .draw { padding: 14px 36px; font-size: 20px; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">幸运号码</div>
+    <h1>Lucky Number Draw</h1>
+  </header>
+
+  <main class="stage">
+    <div class="seal" aria-live="polite"><div class="num" id="num">?</div></div>
+    <div class="status" id="status">Press Draw or the space bar</div>
+    <button class="draw" id="draw" type="button">Draw</button>
+    <div class="hint">Space / Enter = draw</div>
+  </main>
+
+  <section class="panel" aria-label="Settings">
+    <label class="field" for="min">From <input id="min" type="number" value="1" min="0" step="1"></label>
+    <label class="field" for="max">To <input id="max" type="number" value="15" min="1" step="1"></label>
+    <label class="field" for="norepeat"><input id="norepeat" type="checkbox" checked> No repeats</label>
+    <button class="ghost" id="reset" type="button">Start over</button>
+    <div class="history-label">Already drawn</div>
+    <div class="history" id="history"></div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const numEl = $("num"), statusEl = $("status"), drawBtn = $("draw");
+  const minEl = $("min"), maxEl = $("max"), noRepEl = $("norepeat"), histEl = $("history");
+  const KEY = "lucky-number-draw-v1";
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let drawn = [];
+  let rolling = false;
+
+  function load() {
+    try {
+      const s = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (s) { minEl.value = s.min; maxEl.value = s.max; noRepEl.checked = s.noRep; drawn = Array.isArray(s.drawn) ? s.drawn : []; }
+    } catch (e) {}
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify({ min: minEl.value, max: maxEl.value, noRep: noRepEl.checked, drawn })); } catch (e) {}
+  }
+  function range() {
+    const a = Math.floor(Number(minEl.value)), b = Math.floor(Number(maxEl.value));
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+    return a <= b ? [a, b] : [b, a];
+  }
+  function pool() {
+    const r = range(); if (!r) return [];
+    const all = []; for (let i = r[0]; i <= r[1]; i++) all.push(i);
+    return noRepEl.checked ? all.filter((n) => !drawn.includes(n)) : all;
+  }
+  function renderHistory() {
+    histEl.innerHTML = "";
+    drawn.forEach((n, i) => {
+      const c = document.createElement("span");
+      c.className = "chip" + (i === drawn.length - 1 ? " last" : "");
+      c.textContent = n;
+      histEl.appendChild(c);
+    });
+    const p = pool();
+    if (!range()) statusEl.textContent = "Enter a number range below";
+    else if (noRepEl.checked && p.length === 0) statusEl.textContent = "Every number has been drawn. Press Start over to play again.";
+    drawBtn.disabled = rolling || p.length === 0;
+  }
+  const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+  function draw() {
+    if (rolling) return;
+    const p = pool();
+    if (p.length === 0) { renderHistory(); return; }
+    const final = rand(p);
+    const r = range();
+    rolling = true; drawBtn.disabled = true;
+    numEl.classList.remove("landed");
+    statusEl.textContent = "Drawing…";
+    const finish = () => {
+      numEl.classList.remove("rolling");
+      numEl.textContent = final;
+      void numEl.offsetWidth; numEl.classList.add("landed");
+      drawn.push(final);
+      statusEl.textContent = "Number " + final + ", it's your turn!";
+      rolling = false; save(); renderHistory();
+    };
+    if (reduce) { finish(); return; }
+    numEl.classList.add("rolling");
+    let delay = 45; const end = performance.now() + 1700;
+    const tick = () => {
+      numEl.textContent = r[0] + Math.floor(Math.random() * (r[1] - r[0] + 1));
+      if (performance.now() > end) { finish(); return; }
+      delay *= 1.12; setTimeout(tick, delay);
+    };
+    tick();
+  }
+
+  drawBtn.addEventListener("click", draw);
+  document.addEventListener("keydown", (e) => {
+    if (e.target instanceof HTMLInputElement) return;
+    if (e.code === "Space" || e.key === "Enter") { e.preventDefault(); draw(); }
+  });
+  $("reset").addEventListener("click", () => {
+    drawn = []; numEl.textContent = "?"; statusEl.textContent = "Press Draw or the space bar"; save(); renderHistory();
+  });
+  [minEl, maxEl, noRepEl].forEach((el) => el.addEventListener("change", () => { save(); renderHistory(); }));
+
+  load(); renderHistory();
+  if (drawn.length) numEl.textContent = drawn[drawn.length - 1];
+})();
+</script>
